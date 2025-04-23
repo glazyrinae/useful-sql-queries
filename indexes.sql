@@ -1,6 +1,23 @@
+-- СОЗДАНИЕ ИНДЕКСОВ
+
+-- создание уникального индекса
+CREATE UNIQUE INDEX account_freq_flyer ON account (frequent_flyer_id);
+-- создание индекса
+CREATE INDEX flight_arrival_airport ON flight (arrival_airport);
+-- функциональный индекс 
+CREATE INDEX account_last_name_lower ON account (lower(last_name));
+-- составной индекс
+CREATE INDEX flight_depart_arr_sched_dep ON flight (departure_airport, arrival_airport, scheduled_departure)
+-- покрывающие индексы
+CREATE INDEX flight_depart_arr_sched_dep_inc_sched_arr ON flight (departure_airport, arrival_airport, scheduled_departure) INCLUDE (scheduled_arrival);
+-- частичные индексы
+CREATE INDEX flight_actual_departure_not_null ON flight (actual_departure) WHERE actual_departure is not null
+-- удаление индекса
+DROP INDEX index_name;
+
+-- СТАТИСТИКА ИСПОЛЬЗОВАНИЯ ИНДЕКСОВ
 -- сброс статистики
 select pg_stat_reset();
-
 -- информация по индексам
 select
     t.schemaname AS schema_name,
@@ -28,7 +45,6 @@ where
     and i.indexrelname = 'your_index_name'
 order by 
     i.idx_scan desc;
-
 -- поиск неиспользуемых индексов
 select
     schemaname AS schema_name,
