@@ -15,19 +15,20 @@ CREATE INDEX flight_actual_departure_not_null ON flight (actual_departure) WHERE
 -- удаление индекса
 DROP INDEX index_name;
 
--- СТАТИСТИКА ИСПОЛЬЗОВАНИЯ ИНДЕКСОВ
+-- ИНФОРМАЦИЯ ПО ИНДЕКСАМ
 -- сброс статистики
 select pg_stat_reset();
 -- информация по индексам
 select
-    t.schemaname AS schema_name,
-    t.relname AS table_name,
-    i.indexrelname AS index_name,
-    i.idx_scan AS index_scans,
+    t.schemaname as schema_name,
+    t.relname as table_name,
+    i.indexrelname as index_name,
+    i.idx_scan as index_scans,
+    pg_size_pretty(pg_relation_size(t.relname::regclass)) AS table_size,
     pg_size_pretty(pg_relation_size(i.indexrelid::regclass)) AS index_size,
-    i.idx_tup_read AS tuples_read,
-    i.idx_tup_fetch AS tuples_fetched,
-    x.indexdef AS index_definition,
+    i.idx_tup_read as tuples_read,
+    i.idx_tup_fetch as tuples_fetched,
+    x.indexdef as index_definition,
     case 
     	when i.idx_scan > 0 then (100.0 * i.idx_tup_fetch / i.idx_scan)::numeric
         else 0 
@@ -47,15 +48,46 @@ order by
     i.idx_scan desc;
 -- поиск неиспользуемых индексов
 select
-    schemaname AS schema_name,
-    relname AS table_name,
-    indexrelname AS index_name,
+    schemaname as schema_name,
+    relname as table_name,
+    indexrelname as index_name,
     pg_size_pretty(pg_relation_size(indexrelid::regclass)) AS index_size,
-    idx_scan AS scans_count
+    idx_scan as scans_count
 from
     pg_stat_user_indexes
 where
     idx_scan = 0
     and pg_relation_size(indexrelid::regclass) > 1024*1024  -- Индексы больше 1MB
+    and schemaname <> 'pg_toast' and  schemaname <> 'pg_catalog'
 order by
-    pg_relation_size(indexrelid::regclass) DESC;
+    pg_relation_size(indexrelid::regclass) desc;
+
+    
+-- индексы которые дублируются    
+select
+    indrelid::regclass as table_name,
+    array_agg(indexrelid) as indexrelid, -- если нужно точно проверить совпадение запроса на create index
+    array_agg(indexrelid::regclass) as duplicate_indexes,
+    pg_get_indexdef(min(indexrelid)) as index_definition,
+    count(*) as duplicate_count
+from
+    pg_index
+group by 
+    indrelid,
+    indkey -- колонки индекса
+having
+    count(*) > 1
+order by
+    table_name,
+    duplicate_count desc;
+--процент использования индекса чем ближе к 100 тем лучше
+select relname,   
+       100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used,   
+       n_live_tup rows_in_table 
+from pg_stat_user_tables 
+where seq_scan + idx_scan > 0 
+order by n_live_tup desc;
+    
+    
+    
+    
