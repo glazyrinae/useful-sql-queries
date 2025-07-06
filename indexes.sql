@@ -46,6 +46,7 @@ where
     and i.indexrelname = 'your_index_name'
 order by 
     i.idx_scan desc;
+    
 -- поиск неиспользуемых индексов
 select
     schemaname as schema_name,
@@ -80,6 +81,7 @@ having
 order by
     table_name,
     duplicate_count desc;
+    
 --процент использования индекса чем ближе к 100 тем лучше
 select relname,   
        100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used,   
