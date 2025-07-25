@@ -89,6 +89,20 @@ select relname,
 from pg_stat_user_tables 
 where seq_scan + idx_scan > 0 
 order by n_live_tup desc;
+
+-- мониторинг памяти
+SELECT 
+	name, setting, unit, short_desc
+FROM 
+	pg_settings
+WHERE 
+	name IN (
+	    'work_mem',
+	    'maintenance_work_mem',
+	    'shared_buffers',
+	    'effective_cache_size',
+	    'hash_mem_multiplier'
+	);
     
     
     
